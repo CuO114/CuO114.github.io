@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>比赛管理系统 - 全数据回滚完备版</title>
+    <title>比赛管理系统 - 终极修复版</title>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #3498db; --success: #27ae60; --danger: #e74c3c; --dark: #2c3e50; --bg: #f4f7f9; }
@@ -15,15 +15,20 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
         input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; outline: none; }
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-primary { background: var(--primary); color: white; width: 100%; }
-        .btn-danger { background: none; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; font-size: 11px; }
+        .btn-danger { background: #fff5f5; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; font-size: 11px; }
+        .btn-danger:hover { background: var(--danger); color: #fff; }
+        
+        /* 排行榜 */
         .rank-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f8f9fa; cursor: pointer; transition: 0.2s; }
         .rank-row:hover { background: #f0f7ff; }
         .rank-tag { font-size: 0.75em; padding: 2px 6px; border-radius: 4px; background: #eee; font-weight: bold; margin-right: 8px; }
         .rank-tag.dan { background: #e7f3ff; color: #1a73e8; }
         .progress-bg { height: 6px; background: #eee; border-radius: 3px; margin-top: 8px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--primary); transition: width 0.5s; }
+
+        /* 弹窗统计 */
         .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; }
         .modal-content { background:#fff; border-radius:15px; width:520px; padding:25px; position:relative; max-height: 85vh; overflow-y: auto; }
         .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 15px 0; }
@@ -37,16 +42,16 @@
 <body>
 
 <div class="navbar">
-    <h1>🏆 比赛管理系统 (全数据同步)</h1>
+    <h1>🏆 比赛管理系统 (修复版)</h1>
     <div id="authArea"><button class="btn" onclick="toggleModal('loginModal', true)">管理员登录</button></div>
 </div>
 
 <div class="container">
     <div class="main-content">
         <div class="card admin-only">
-            <h2>👤 选手管理</h2>
+            <h2>👤 选手录入</h2>
             <div style="display: grid; grid-template-columns: 1.5fr 1.5fr auto; gap: 10px;">
-                <input type="text" id="playerName" placeholder="选手姓名">
+                <input type="text" id="playerName" placeholder="姓名">
                 <select id="initRankSelect"></select>
                 <button class="btn" style="background:var(--success); color:white" onclick="addPlayer()">录入选手</button>
             </div>
@@ -54,18 +59,18 @@
         <div class="card admin-only">
             <h2>🎮 对局结算录入</h2>
             <table><tbody id="matchInputs"></tbody></table>
-            <button class="btn btn-primary" style="margin-top:15px;" onclick="submitMatch()">确认结算并同步云端</button>
+            <button class="btn btn-primary" style="margin-top:15px;" onclick="submitMatch()">提交本局计算</button>
         </div>
         <div class="card">
-            <h2>📜 对局记录 (含快照回滚)</h2>
+            <h2>📜 对局记录 (撤销即物理删除)</h2>
             <div id="historyList">加载中...</div>
         </div>
     </div>
     <div class="sidebar">
         <div class="card">
-            <h2>🔍 战绩查询</h2>
+            <h2>🔍 选手战绩查询</h2>
             <div style="display:flex; gap:5px; margin-bottom:15px;">
-                <input type="text" id="searchName" placeholder="输入姓名查询..." list="playerList">
+                <input type="text" id="searchName" placeholder="输入姓名..." list="playerList">
                 <button class="btn btn-primary" onclick="showPlayerStats(document.getElementById('searchName').value)">查询</button>
             </div>
             <h2>📊 实时排行榜</h2>
@@ -87,7 +92,7 @@
 <datalist id="playerList"></datalist>
 
 <script>
-    // --- 核心配置 ---
+    // --- 配置区 ---
     const SUPABASE_URL = 'https://lifguzdiazaedlnctuxp.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpZmd1emRpYXphZWRsbmN0dXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjM1NTYsImV4cCI6MjA5MTM5OTU1Nn0.k5vMFNwFcqQR9E3EU5Bl_hDwJDfzYXRw0sMOtwJCzl4';
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -117,8 +122,7 @@
     const PLACE_COLORS = ['#f1c40f', '#95a5a6', '#e67e22', '#34495e'];
     let allPlayers = [], allHistory = [], isAdminGlobal = false;
 
-    // --- 核心逻辑 ---
-
+    // --- 初始化与加载 ---
     async function init() {
         initRankSelect.innerHTML = RANK_CONFIG.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
         const tbody = document.getElementById('matchInputs');
@@ -128,100 +132,23 @@
     }
 
     async function loadData() {
-        const { data: pData } = await sb.from('players').select('*');
-        const { data: hData } = await sb.from('history').select('*').order('time', { ascending: false });
-        allPlayers = pData || []; allHistory = hData || [];
-        renderLeaderboard(allPlayers);
-        renderHistory(allHistory.slice(0, 15));
-        renderDatalist(allPlayers);
+        try {
+            const { data: pData } = await sb.from('players').select('*');
+            const { data: hData } = await sb.from('history').select('*').order('time', { ascending: false });
+            allPlayers = pData || []; allHistory = hData || [];
+            renderLeaderboard(allPlayers);
+            renderHistory(allHistory.slice(0, 15));
+            renderDatalist(allPlayers);
+        } catch (e) { console.error("数据加载失败", e); }
     }
 
-    // --- 录入对局：确保存储所有前置快照 ---
-    async function submitMatch() {
-        let group = [];
-        for (let i = 0; i < 4; i++) {
-            let name = document.getElementById(`p${i}_name`).value, raw = parseFloat(document.getElementById(`p${i}_raw`).value);
-            let p = allPlayers.find(x => x.name === name);
-            if (!p || isNaN(raw)) return alert("输入不全或选手不存在");
-            group.push({ name, raw, pData: p });
-        }
-        group.sort((a, b) => b.raw - a.raw);
-        
-        let details = [];
-        for (let i = 0; i < 4; i++) {
-            const item = group[i], p = item.pData, conf = RANK_CONFIG[p.rank_idx];
-            
-            // 重要：计算本次对局分 (公式: 原始分/10 + 偏移)
-            const matchPointGain = (item.raw / 10) + BASE_OFFSETS[i];
-            
-            // 计算总分变动 (含奖励和惩罚)
-            let totalGain = matchPointGain + conf.bonus[i];
-            if (p.rank_idx >= 12) {
-                const others = group.filter(m => m.name !== item.name);
-                const avgY = others.reduce((s, m) => s + (m.pData.rank_idx < 9 ? 9 : m.pData.rank_idx), 0) / 3;
-                if (p.rank_idx > avgY) totalGain -= Math.min(20, 5 * (p.rank_idx - avgY));
-            }
-
-            // 【快照记录】保存对局前的全数据
-            const snapshot = {
-                points_before: p.points,
-                rank_before: p.rank_idx,
-                total_match_points_before: p.total_match_points || 0
-            };
-
-            // 计算新数值
-            let nPts = p.points + totalGain, nIdx = p.rank_idx;
-            if (nPts >= conf.up && nIdx < RANK_CONFIG.length-1) { nIdx++; nPts = RANK_CONFIG[nIdx].init; }
-            else if (nPts < 0) { if (nIdx > 0 && p.rank_idx >= 9) { nIdx--; nPts = RANK_CONFIG[nIdx].init; } else nPts = 0; }
-
-            // 写入数据库
-            await sb.from('players').update({ 
-                points: nPts, 
-                rank_idx: nIdx,
-                total_match_points: (p.total_match_points || 0) + matchPointGain
-            }).eq('id', p.id);
-
-            details.push({ 
-                name: item.name, gain: totalGain, matchPointGain, raw: item.raw, rank: i+1,
-                ...snapshot 
-            });
-        }
-        await sb.from('history').insert([{ details }]);
-        alert("结算已同步！"); loadData();
-        for (let i=0; i<4; i++) { document.getElementById(`p${i}_name`).value=''; document.getElementById(`p${i}_raw`).value=''; }
-    }
-
-    // --- 回滚逻辑：完美覆盖所有维度 ---
-    async function revertMatch(id) {
-        if (!confirm("警告：撤销将回滚选手的分数、段位、战绩分并【彻底删除】此记录。是否继续？")) return;
-        
-        const { data: record, error } = await sb.from('history').select('*').eq('id', id).single();
-        if (error) return alert("记录获取失败");
-
-        for (const d of record.details) {
-            // 利用快照直接覆盖回对局前的状态
-            await sb.from('players').update({ 
-                points: d.points_before, 
-                rank_idx: d.rank_before,
-                total_match_points: d.total_match_points_before
-            }).eq('name', d.name);
-        }
-
-        // 删除对局记录
-        // 这一步删掉后，动态统计（场数、顺位分布等）会自动回滚
-        await sb.from('history').delete().eq('id', id);
-        
-        alert("回滚成功！全数据已恢复。");
-        loadData();
-    }
-
-    // --- 战绩统计渲染 (动态扫描) ---
+    // --- 战绩查询功能 (修复) ---
     function showPlayerStats(name) {
+        if (!name) return alert("请输入选手姓名");
         const player = allPlayers.find(p => p.name === name);
-        if (!player) return alert("未找到选手");
+        if (!player) return alert("未找到选手: " + name);
 
         let matchCount = 0, placeCounts = [0, 0, 0, 0], recent5 = [];
-        // 扫描 history 列表计算动态指标
         allHistory.forEach(h => {
             const m = h.details.find(d => d.name === name);
             if (m) {
@@ -232,13 +159,13 @@
         });
 
         const conf = RANK_CONFIG[player.rank_idx];
-        statsContent.innerHTML = `
+        document.getElementById('statsContent').innerHTML = `
             <button onclick="toggleModal('statsModal', false)" style="position:absolute; right:15px; top:15px; border:none; background:none; font-size:24px; cursor:pointer;">&times;</button>
             <h2 style="margin:0">${player.name}</h2>
             <div class="rank-tag ${conf.name.includes('段')?'dan':''}" style="margin:10px 0; font-size:14px;">${conf.name} · ${player.points.toFixed(1)} Pt</div>
             
             <div class="stat-grid">
-                <div class="stat-item"><div class="stat-label">累计比赛分</div><div class="stat-value">${(player.total_match_points || 0).toFixed(1)}</div></div>
+                <div class="stat-item"><div class="stat-label">累计对局分 (公式算)</div><div class="stat-value">${(player.total_match_points || 0).toFixed(1)}</div></div>
                 <div class="stat-item"><div class="stat-label">总场数</div><div class="stat-value">${matchCount}</div></div>
                 <div class="stat-item"><div class="stat-label">Top2 胜率</div><div class="stat-value">${matchCount > 0 ? (((placeCounts[0]+placeCounts[1])/matchCount)*100).toFixed(1) : 0}%</div></div>
                 <div class="stat-item"><div class="stat-label">平均排名</div><div class="stat-value">${matchCount > 0 ? (placeCounts.reduce((s,c,i)=>s+c*(i+1),0)/matchCount).toFixed(2) : '-'}</div></div>
@@ -254,10 +181,90 @@
         toggleModal('statsModal', true);
     }
 
-    // --- 界面支撑 ---
+    // --- 提交结算：记录完整快照 ---
+    async function submitMatch() {
+        let group = [];
+        for (let i = 0; i < 4; i++) {
+            let name = document.getElementById(`p${i}_name`).value, raw = parseFloat(document.getElementById(`p${i}_raw`).value);
+            let p = allPlayers.find(x => x.name === name);
+            if (!p || isNaN(raw)) return alert("输入信息不全或选手不存在");
+            group.push({ name, raw, pData: p });
+        }
+        group.sort((a, b) => b.raw - a.raw);
+        
+        let details = [];
+        for (let i = 0; i < 4; i++) {
+            const item = group[i], p = item.pData, conf = RANK_CONFIG[p.rank_idx];
+            
+            // 公式计算对局分：原始分/10 + 偏移
+            const mpg = (item.raw / 10) + BASE_OFFSETS[i];
+            
+            let totalGain = mpg + conf.bonus[i];
+            if (p.rank_idx >= 12) {
+                const others = group.filter(m => m.name !== item.name);
+                const avgY = others.reduce((s, m) => s + (m.pData.rank_idx < 9 ? 9 : m.pData.rank_idx), 0) / 3;
+                if (p.rank_idx > avgY) totalGain -= Math.min(20, 5 * (p.rank_idx - avgY));
+            }
+
+            // 快照：记录对局前的全部数据
+            const snapshot = {
+                points_before: p.points,
+                rank_before: p.rank_idx,
+                tmp_before: p.total_match_points || 0
+            };
+
+            let nPts = p.points + totalGain, nIdx = p.rank_idx;
+            if (nPts >= conf.up && nIdx < RANK_CONFIG.length-1) { nIdx++; nPts = RANK_CONFIG[nIdx].init; }
+            else if (nPts < 0) { if (nIdx > 0 && p.rank_idx >= 9) { nIdx--; nPts = RANK_CONFIG[nIdx].init; } else nPts = 0; }
+
+            await sb.from('players').update({ 
+                points: nPts, rank_idx: nIdx,
+                total_match_points: (p.total_match_points || 0) + mpg
+            }).eq('id', p.id);
+
+            details.push({ 
+                name: item.name, gain: totalGain, matchPointGain: mpg, raw: item.raw, rank: i+1,
+                ...snapshot 
+            });
+        }
+        await sb.from('history').insert([{ details }]);
+        alert("结算成功！"); loadData();
+        for (let i=0; i<4; i++) { document.getElementById(`p${i}_name`).value=''; document.getElementById(`p${i}_raw`).value=''; }
+    }
+
+    // --- 撤销回滚：核心修正 (恢复数据+彻底删除记录) ---
+    async function revertMatch(id) {
+        if (!confirm("确定撤销并【彻底删除】对局记录吗？选手数据将回滚至对局前。")) return;
+        
+        try {
+            // 1. 获取该对局快照
+            const { data: record, error: fetchErr } = await sb.from('history').select('*').eq('id', id).single();
+            if (fetchErr) throw fetchErr;
+
+            // 2. 恢复 4 名选手的全部数据
+            for (const d of record.details) {
+                await sb.from('players').update({ 
+                    points: d.points_before, 
+                    rank_idx: d.rank_before,
+                    total_match_points: d.tmp_before
+                }).eq('name', d.name);
+            }
+
+            // 3. 彻底从数据库物理删除对局记录
+            const { error: delErr } = await sb.from('history').delete().eq('id', id);
+            if (delErr) throw delErr;
+
+            alert("对局记录已彻底删除，选手分数已恢复。");
+            await loadData(); // 强制重新加载以刷新界面
+        } catch (e) {
+            alert("操作失败：" + e.message);
+        }
+    }
+
+    // --- 排行榜渲染 (显示分数) ---
     function renderLeaderboard(players) {
         const sorted = [...players].sort((a, b) => b.rank_idx - a.rank_idx || b.points - a.points);
-        leaderboard.innerHTML = sorted.map((p, i) => {
+        document.getElementById('leaderboard').innerHTML = sorted.map((p, i) => {
             const conf = RANK_CONFIG[p.rank_idx];
             return `<div class="rank-row" onclick="showPlayerStats('${p.name}')">
                 <div style="width:30px; color:#ccc; font-weight:bold">${i+1}</div>
@@ -268,12 +275,13 @@
                     </div>
                     <div class="progress-bg"><div class="progress-fill" style="width:${(p.points/conf.up)*100}%"></div></div>
                 </div>
+                ${isAdminGlobal ? `<button class="btn-danger" style="margin-left:10px;" onclick="event.stopPropagation(); deletePlayer('${p.id}', '${p.name}')">删</button>` : ''}
             </div>`;
         }).join('');
     }
 
     function renderHistory(h) {
-        historyList.innerHTML = h.map(item => `
+        document.getElementById('historyList').innerHTML = h.map(item => `
             <div class="history-item">
                 <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
                     <span style="color:#bbb; font-size:11px;">🕒 ${new Date(item.time).toLocaleString()}</span>
@@ -285,6 +293,7 @@
             </div>`).join('');
     }
 
+    // --- 权限与登录 ---
     async function login() {
         const { error } = await sb.auth.signInWithPassword({ email: loginEmail.value, password: loginPassword.value });
         if (error) alert(error.message); else toggleModal('loginModal', false);
@@ -301,6 +310,10 @@
         if (!name) return;
         const { error } = await sb.from('players').insert([{ name, rank_idx: rIdx, points: RANK_CONFIG[rIdx].init, total_match_points: 0 }]);
         if (error) alert(error.message); else { playerName.value=''; loadData(); }
+    }
+    async function deletePlayer(id, name) {
+        if (!confirm(`确定彻底删除选手【${name}】？`)) return;
+        await sb.from('players').delete().eq('id', id); loadData();
     }
     function renderDatalist(p) { playerList.innerHTML = p.map(x => `<option value="${x.name}">`).join(''); }
     function toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; }
