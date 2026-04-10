@@ -100,12 +100,17 @@
 <script>
     // ================= 配置区 =================
     // 请替换为你自己的 Supabase 地址和 Anon Key
+    // 在配置区增加一个检查逻辑
+if (typeof supabase === 'undefined') {
+    alert("警告：Supabase 库文件加载失败！请检查网络或更换 CDN 链接。");
+} else {
+    
     const SUPABASE_URL = 'https://lifguzdiazaedlnctuxp.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpZmd1emRpYXphZWRsbmN0dXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjM1NTYsImV4cCI6MjA5MTM5OTU1Nn0.k5vMFNwFcqQR9E3EU5Bl_hDwJDfzYXRw0sMOtwJCzl4';
     
     // 初始化客户端，使用 sb 避免变量名冲突
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+    }
     // 段位配置表
     const RANK_CONFIG = [
         { name: "9级", up: 20, init: 0, onZero: "keep", bonus: [20, 5, 0, 0] },
