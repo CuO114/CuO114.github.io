@@ -2,46 +2,28 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>比赛管理系统 - 官方数据版</title>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <title>比赛管理系统 - 稳定增强版</title>
+    <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/supabase/2.0.0-rc.10/supabase-js.js"></script>
     <style>
         :root { --primary: #3498db; --success: #27ae60; --danger: #e74c3c; --dark: #2c3e50; --bg: #f4f7f9; }
-        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; }
+        body { font-family: 'PingFang SC', sans-serif; background: var(--bg); margin: 0; padding: 20px; }
         .container { max-width: 1250px; margin: auto; display: grid; grid-template-columns: 1fr 420px; gap: 20px; }
         .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        h2 { margin-top: 0; font-size: 1.1em; color: var(--dark); border-left: 4px solid var(--primary); padding-left: 10px; margin-bottom: 15px; }
-        
-        .navbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .admin-only { display: none; } 
-
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; outline: none; }
-        
-        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-primary { background: var(--primary); color: white; width: 100%; }
-        .btn-success { background: var(--success); color: white; }
-        .btn-danger { background: none; color: var(--danger); border: 1px solid var(--danger); padding: 4px 8px; font-size: 11px; }
-        .btn-danger:hover { background: var(--danger); color: #fff; }
-
-        .rank-row { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid #f8f9fa; }
         .rank-tag { font-size: 0.75em; padding: 2px 6px; border-radius: 4px; background: #eee; font-weight: bold; margin-right: 8px; }
         .rank-tag.dan { background: #e7f3ff; color: #1a73e8; }
         .progress-bg { height: 6px; background: #eee; border-radius: 3px; margin-top: 8px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--primary); transition: width 0.5s; }
-
         #loginModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center; }
-        .history-item { font-size: 0.85em; padding: 12px; background: #fff; border: 1px solid #edf2f7; border-radius: 8px; margin-bottom: 10px; }
-        .formula-log { font-size: 10px; color: #999; margin-top: 4px; font-family: monospace; line-height: 1.4; }
     </style>
 </head>
 <body>
 
-<div class="navbar">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <h1>🏆 比赛管理系统</h1>
-    <div id="authArea">
-        <button class="btn" onclick="toggleModal(true)">管理员登录</button>
-    </div>
+    <div id="authArea"><button class="btn" onclick="toggleModal(true)">管理员登录</button></div>
 </div>
 
 <div class="container">
@@ -49,53 +31,60 @@
         <div id="loginModal">
             <div class="card" style="width: 320px;">
                 <h2>管理员登录</h2>
-                <input type="email" id="loginEmail" placeholder="邮箱" style="margin-bottom:10px;">
-                <input type="password" id="loginPassword" placeholder="密码" style="margin-bottom:10px;">
+                <input type="email" id="loginEmail" placeholder="邮箱" style="width:100%; margin-bottom:10px; padding:8px;">
+                <input type="password" id="loginPassword" placeholder="密码" style="width:100%; margin-bottom:10px; padding:8px;">
                 <button class="btn btn-primary" onclick="login()">确认登录</button>
-                <button class="btn" onclick="toggleModal(false)" style="width:100%; margin-top:5px; background:#eee;">取消</button>
+                <button class="btn" onclick="toggleModal(false)" style="width:100%; margin-top:5px;">取消</button>
             </div>
         </div>
 
         <div class="card admin-only">
             <h2>👤 选手管理</h2>
             <div style="display: grid; grid-template-columns: 1.5fr 1.5fr auto; gap: 10px;">
-                <input type="text" id="playerName" placeholder="输入选手姓名">
-                <select id="initRankSelect"></select>
-                <button class="btn btn-success" onclick="addPlayer()">录入选手</button>
+                <input type="text" id="playerName" placeholder="输入选手姓名" style="padding:8px;">
+                <select id="initRankSelect" style="padding:8px;"></select>
+                <button class="btn" style="background:var(--success); color:white" onclick="addPlayer()">录入选手</button>
             </div>
         </div>
 
         <div class="card admin-only">
-            <h2>🎮 对局结算录入</h2>
-            <table id="matchInputsTable">
-                <tbody id="matchInputs"></tbody>
-            </table>
-            <button class="btn btn-primary" style="margin-top:15px;" onclick="submitMatch()">提交本局积分</button>
+            <h2>🎮 对局结算</h2>
+            <table style="width:100%"><tbody id="matchInputs"></tbody></table>
+            <button class="btn btn-primary" style="margin-top:15px;" onclick="submitMatch()">提交结算</button>
         </div>
 
         <div class="card">
-            <h2>📜 对局历史记录</h2>
-            <div id="historyList">加载中...</div>
+            <h2>📜 对局记录</h2>
+            <div id="historyList"></div>
         </div>
     </div>
 
     <div class="sidebar">
         <div class="card">
             <h2>📊 实时排行榜</h2>
-            <div id="leaderboard">正在连接数据库...</div>
+            <div id="leaderboard">正在初始化系统...</div>
         </div>
     </div>
 </div>
-
 <datalist id="playerList"></datalist>
 
 <script>
     // --- 配置区 ---
     const SUPABASE_URL = 'https://lifguzdiazaedlnctuxp.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxpZmd1emRpYXphZWRsbmN0dXhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4MjM1NTYsImV4cCI6MjA5MTM5OTU1Nn0.k5vMFNwFcqQR9E3EU5Bl_hDwJDfzYXRw0sMOtwJCzl4';
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // 完全对照表格更新的数据配置
+    let sb;
+    try {
+        // 关键点：检查 supabase 对象是否存在
+        if (typeof supabase === 'undefined') {
+            document.getElementById('leaderboard').innerHTML = '<b style="color:red">库文件加载失败，请检查网络或刷新页面。</b>';
+        } else {
+            sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+
     const RANK_CONFIG = [
         { name: "9级", init: 0, up: 20, onZero: "keep", bonus: [30, 15, 0, 0] },
         { name: "8级", init: 0, up: 20, onZero: "keep", bonus: [30, 15, 0, 0] },
@@ -106,13 +95,13 @@
         { name: "3级", init: 0, up: 100, onZero: "keep", bonus: [30, 15, 0, 0] },
         { name: "2级", init: 0, up: 100, onZero: "keep", bonus: [30, 15, 0, -15] },
         { name: "1级", init: 0, up: 100, onZero: "keep", bonus: [30, 15, 0, -30] },
-        { name: "1段", init: 200, up: 400, onZero: "drop", bonus: [60, 15, 0, -25] },   // idx 9
-        { name: "2段", init: 300, up: 600, onZero: "drop", bonus: [60, 15, -5, -30] },   // idx 10
-        { name: "3段", init: 400, up: 800, onZero: "drop", bonus: [60, 15, -10, -35] },  // idx 11
-        { name: "4段", init: 600, up: 1200, onZero: "drop", bonus: [75, 30, -15, -70] }, // idx 12
+        { name: "1段", init: 200, up: 400, onZero: "drop", bonus: [60, 15, 0, -25] },
+        { name: "2段", init: 300, up: 600, onZero: "drop", bonus: [60, 15, -5, -30] },
+        { name: "3段", init: 400, up: 800, onZero: "drop", bonus: [60, 15, -10, -35] },
+        { name: "4段", init: 600, up: 1200, onZero: "drop", bonus: [75, 30, -15, -70] },
         { name: "5段", init: 800, up: 1600, onZero: "drop", bonus: [75, 30, -20, -75] },
         { name: "6段", init: 1000, up: 2000, onZero: "drop", bonus: [75, 30, -25, -80] },
-        { name: "7段", init: 1200, up: 2400, onZero: "drop", bonus: [90, 45, -35, -115] },  
+        { name: "7段", init: 1200, up: 2400, onZero: "drop", bonus: [90, 45, -35, -115] },
         { name: "8段", init: 1400, up: 2800, onZero: "drop", bonus: [90, 40, -40, -120] },
         { name: "9段", init: 1600, up: 3200, onZero: "drop", bonus: [90, 35, -45, -125] },
         { name: "10段", init: 2000, up: 4000, onZero: "drop", bonus: [90, 30, -50, -130] }
@@ -122,46 +111,41 @@
     let allPlayers = [];
     let isAdminGlobal = false;
 
-    // --- 逻辑区 ---
-
     async function init() {
-        document.getElementById('initRankSelect').innerHTML = RANK_CONFIG.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
+        if (!sb) return;
+        initRankSelect.innerHTML = RANK_CONFIG.map((r, i) => `<option value="${i}">${r.name}</option>`).join('');
         const tbody = document.getElementById('matchInputs');
         for (let i = 0; i < 4; i++) {
-            tbody.innerHTML += `<tr>
-                <td><input type="text" id="p${i}_name" list="playerList" placeholder="姓名"></td>
-                <td><input type="number" id="p${i}_raw" placeholder="原始分"></td>
-            </tr>`;
+            tbody.innerHTML += `<tr><td><input type="text" id="p${i}_name" list="playerList" placeholder="姓名"></td><td><input type="number" id="p${i}_raw" placeholder="原始分"></td></tr>`;
         }
         sb.auth.onAuthStateChange((event, session) => { refreshAuthUI(session); });
         loadData();
     }
 
     async function loadData() {
+        const lb = document.getElementById('leaderboard');
         try {
-            const { data: pData } = await sb.from('players').select('*');
+            const { data: pData, error: pErr } = await sb.from('players').select('*');
+            if (pErr) throw pErr;
             const { data: hData } = await sb.from('history').select('*').order('time', { ascending: false }).limit(10);
             allPlayers = pData || [];
             renderLeaderboard(allPlayers);
             renderHistory(hData || []);
             renderDatalist(allPlayers);
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            lb.innerHTML = `<b style="color:red">数据库连接失败: ${e.message}</b>`;
+        }
     }
 
     async function login() {
-        const { error } = await sb.auth.signInWithPassword({ 
-            email: loginEmail.value, 
-            password: loginPassword.value 
-        });
+        const { error } = await sb.auth.signInWithPassword({ email: loginEmail.value, password: loginPassword.value });
         if (error) alert(error.message); else toggleModal(false);
     }
 
     function refreshAuthUI(session) {
         isAdminGlobal = !!session;
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdminGlobal ? 'block' : 'none');
-        authArea.innerHTML = isAdminGlobal 
-            ? `<span style="color:var(--success); font-size:12px; margin-right:10px;">● 管理员模式</span><button class="btn" style="padding:4px 8px; font-size:12px;" onclick="sb.auth.signOut()">退出</button>` 
-            : `<button class="btn" onclick="toggleModal(true)">管理员登录</button>`;
+        authArea.innerHTML = isAdminGlobal ? `<button class="btn btn-danger" onclick="sb.auth.signOut()">退出</button>` : `<button class="btn" onclick="toggleModal(true)">管理员登录</button>`;
         renderLeaderboard(allPlayers);
     }
 
@@ -169,16 +153,14 @@
         const name = playerName.value.trim();
         const rIdx = parseInt(initRankSelect.value);
         if (!name) return;
-        const { error } = await sb.from('players').insert([{ 
-            name, rank_idx: rIdx, points: RANK_CONFIG[rIdx].init 
-        }]);
+        const { error } = await sb.from('players').insert([{ name, rank_idx: rIdx, points: RANK_CONFIG[rIdx].init }]);
         if (error) alert(error.message); else { playerName.value = ''; loadData(); }
     }
 
     async function deletePlayer(id, name) {
-        if (!confirm(`确定要删除选手【${name}】吗？`)) return;
+        if (!confirm(`确定删除选手【${name}】吗？`)) return;
         const { error } = await sb.from('players').delete().eq('id', id);
-        if (error) alert("删除失败，请检查数据库策略 (RLS)"); else loadData();
+        if (error) alert("删除失败，请检查 RLS 策略"); else loadData();
     }
 
     async function submitMatch() {
@@ -187,60 +169,30 @@
             let name = document.getElementById(`p${i}_name`).value;
             let raw = parseFloat(document.getElementById(`p${i}_raw`).value);
             let pData = allPlayers.find(p => p.name === name);
-            if (!pData || isNaN(raw)) return alert("输入信息不完整或选手不存在");
+            if (!pData || isNaN(raw)) return alert("信息不全");
             matchGroup.push({ name, raw, pData });
         }
-
         matchGroup.sort((a, b) => b.raw - a.raw);
-
         let details = [];
-        for (let i = 0; i < matchGroup.length; i++) {
-            const item = matchGroup[i];
-            const p = item.pData;
-            const conf = RANK_CONFIG[p.rank_idx];
-            
-            // 1. 基础积分 = (原始分/10) + 基础偏移(+20, -20, -40, -60)
-            let basePart = (item.raw / 10) + BASE_OFFSETS[i];
-            // 2. 表格顺位奖励 (Bonus)
-            let bonusPart = conf.bonus[i];
-            // 3. 动态虐菜惩罚 (4段及以上触发)
+        for (let i = 0; i < 4; i++) {
+            const item = matchGroup[i]; const p = item.pData; const conf = RANK_CONFIG[p.rank_idx];
+            let base = (item.raw / 10) + BASE_OFFSETS[i];
+            let bonus = conf.bonus[i];
             let penalty = 0;
-            if (p.rank_idx >= 12) { 
+            if (p.rank_idx >= 12) {
                 const others = matchGroup.filter(m => m.name !== item.name);
-                // 1段以下(idx < 9)对手按 9 计算
-                const sumY = others.reduce((sum, m) => sum + (m.pData.rank_idx < 9 ? 9 : m.pData.rank_idx), 0);
-                const avgY = sumY / 3;
-                if (p.rank_idx > avgY) {
-                    penalty = -Math.min(20, 5 * (p.rank_idx - avgY));
-                }
+                const avgY = others.reduce((sum, m) => sum + (m.pData.rank_idx < 9 ? 9 : m.pData.rank_idx), 0) / 3;
+                if (p.rank_idx > avgY) penalty = -Math.min(20, 5 * (p.rank_idx - avgY));
             }
-
-            let totalGain = basePart + bonusPart + penalty;
-            let nPts = p.points + totalGain;
-            let nIdx = p.rank_idx;
-
-            // 升降段逻辑
-            if (nPts >= conf.up && nIdx < RANK_CONFIG.length - 1) {
-                nIdx++; nPts = RANK_CONFIG[nIdx].init;
-            } else if (nPts < 0) {
-                if (conf.onZero === "drop" && nIdx > 0) {
-                    nIdx--; nPts = RANK_CONFIG[nIdx].init;
-                } else nPts = 0;
-            }
-
-            // 同步云端
+            let totalGain = base + bonus + penalty;
+            let nPts = p.points + totalGain; let nIdx = p.rank_idx;
+            if (nPts >= conf.up && nIdx < RANK_CONFIG.length - 1) { nIdx++; nPts = RANK_CONFIG[nIdx].init; }
+            else if (nPts < 0) { if (conf.onZero === "drop" && nIdx > 0) { nIdx--; nPts = RANK_CONFIG[nIdx].init; } else nPts = 0; }
             await sb.from('players').update({ points: nPts, rank_idx: nIdx }).eq('id', p.id);
-
-            details.push({ 
-                name: item.name, 
-                gain: totalGain,
-                log: `(${item.raw}/10 + ${BASE_OFFSETS[i]}) + ${bonusPart} + ${penalty.toFixed(1)}`
-            });
+            details.push({ name: item.name, gain: totalGain });
         }
-
         await sb.from('history').insert([{ details }]);
-        alert("结算成功，数据已云端同步！");
-        for (let i = 0; i < 4; i++) document.getElementById(`p${i}_raw`).value = '';
+        alert("结算成功");
         loadData();
     }
 
@@ -248,34 +200,16 @@
         const sorted = [...players].sort((a, b) => b.rank_idx - a.rank_idx || b.points - a.points);
         leaderboard.innerHTML = sorted.map((p, i) => {
             const conf = RANK_CONFIG[p.rank_idx];
-            return `<div class="rank-row">
-                <div style="width:25px; color:#ccc; font-weight:bold">${i+1}</div>
-                <div class="player-info">
-                    <strong>${p.name}</strong> <span class="rank-tag ${conf.name.includes('段')?'dan':''}">${conf.name}</span>
-                    ${isAdminGlobal ? `<button class="btn-danger" style="float:right" onclick="deletePlayer('${p.id}', '${p.name}')">删除</button>` : ''}
-                    <div style="font-size:11px; color:#999; margin-top:4px;">${p.points.toFixed(1)} / ${conf.up} Pt</div>
-                    <div class="progress-bg"><div class="progress-fill" style="width:${(p.points/conf.up)*100}%"></div></div>
-                </div>
-            </div>`;
+            return `<div class="rank-row"><div style="width:25px; color:#ccc">${i+1}</div><div class="player-info"><strong>${p.name}</strong> <span class="rank-tag ${conf.name.includes('段')?'dan':''}">${conf.name}</span>${isAdminGlobal ? `<button class="btn" style="float:right; color:red; background:none; padding:0" onclick="deletePlayer('${p.id}','${p.name}')">删除</button>` : ''}<div class="progress-bg"><div class="progress-fill" style="width:${(p.points/conf.up)*100}%"></div></div></div></div>`;
         }).join('');
     }
 
-    function renderHistory(history) {
-        historyList.innerHTML = history.map(h => `
-            <div class="history-item">
-                <div style="color:#bbb; font-size:11px; margin-bottom:5px;">🕒 ${new Date(h.time).toLocaleString()}</div>
-                ${h.details.map(d => `
-                    <div style="margin-bottom:6px;">
-                        <b>${d.name}</b>: <span style="color:${d.gain>=0?'var(--success)':'var(--danger)'}; font-weight:bold;">${d.gain.toFixed(1)}</span>
-                        <div class="formula-log">${d.log}</div>
-                    </div>
-                `).join('')}
-            </div>`).join('');
+    function renderHistory(h) {
+        historyList.innerHTML = h.map(item => `<div class="card" style="font-size:12px; padding:10px; margin-bottom:5px;">🕒 ${new Date(item.time).toLocaleString()}<br>${item.details.map(d => `${d.name}: ${d.gain.toFixed(1)}`).join(' | ')}</div>`).join('');
     }
 
-    function renderDatalist(players) { playerList.innerHTML = players.map(p => `<option value="${p.name}">`).join(''); }
-    function toggleModal(show) { loginModal.style.display = show ? 'flex' : 'none'; }
-
+    function renderDatalist(p) { playerList.innerHTML = p.map(x => `<option value="${x.name}">`).join(''); }
+    function toggleModal(s) { loginModal.style.display = s ? 'flex' : 'none'; }
     init();
 </script>
 </body>
